@@ -175,6 +175,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                 continue
 
             evk = sub.average()
+            # Tag evoked with subject id so collapsed-localizer can collapse per-subject first.
+            # (MNE uses evoked.comment as a free-form string label.)
+            try:
+                evk.comment = str(subj_id)
+            except Exception:
+                pass
             set_name_to_evokeds[name].append(evk)
             set_name_to_total_epochs[name] += epoch_count
             subject_evokeds.append({"subject_id": subj_id, "condition": name, "evoked": evk, "n_epochs": epoch_count})
@@ -190,7 +196,6 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     total_evokeds = sum(len(v) for v in set_name_to_evokeds.values())
     if total_evokeds == 0:
-        write_analysis_page(page_path, title=analysis_id, figure_paths=[], notes=["No subjects met inclusion criteria."])
         return 1
 
     # Collapsed localizer per component
@@ -230,7 +235,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Collapsed localizer figure
     first_list = next((v for v in set_name_to_evokeds.values() if v), None)
     if first_list is None:
-        write_analysis_page(page_path, title=analysis_id, figure_paths=[], notes=["No evokeds available after selection."])
         return 1
     first_evoked = first_list[0]
     epoch_end_ms = float(first_evoked.times[-1] * 1000.0)
@@ -247,7 +251,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     plt.close(cl_fig)
 
-    # Use absolute paths so the report writer can reliably compute links relative to `page_path`.
+    # Track saved figures for run_metrics (count only).
     saved_figs: list[str] = [str(Path(cl_out).resolve())]
 
     # Subject-level measurements

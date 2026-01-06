@@ -25,6 +25,113 @@ from erp.stats_plots import plot_boxplot, plot_effect_sizes, plot_violin
 from erp.summary_report import StatisticalReportGenerator
 
 
+def _method_map(name: str) -> str | None:
+    m = str(name or "").lower()
+    # statsmodels.multitest names + common aliases used in configs
+    mapping = {
+        "hs": "holm-sidak",
+        "holm-sidak": "holm-sidak",
+        "holm": "holm",
+        "bonferroni": "bonferroni",
+        "sidak": "sidak",
+        "fdr_bh": "fdr_bh",
+        "none": None,
+    }
+    return mapping.get(m, "holm-sidak")
+
+
+def _apply_family_correction(*, output_dir: Path, correction_family: str, method: str) -> None:
+    """
+    Second-stage multiple-comparisons correction across a broader family than the per-file correction.
+
+    This adds a `p-corr-family` column to:
+    - pairwise_{component}_{dv}.csv  (from pingouin, uses p-unc as input)
+    - lmm_pairwise_{component}_{dv}.csv (uses p-unc as input)
+
+    Family definitions:
+    - component: correct within each component across all DVs and all pairs
+    - dv:        correct within each DV across all components and all pairs
+    - all:       correct across everything in the output_dir
+    - none/empty: do nothing
+    """
+    from statsmodels.stats.multitest import multipletests
+
+    fam = str(correction_family or "").lower().strip()
+    if fam in {"", "none"}:
+        return
+
+    m = _method_map(method)
+    if m is None:
+        return
+
+    def _load(kind: str) -> list[tuple[str, str, Path, pd.DataFrame]]:
+        out = []
+        for p in sorted(output_dir.glob(f"{kind}_*.csv")):
+            # expected: {kind}_{component}_{dv}.csv
+            parts = p.stem.split("_")
+            if len(parts) < 3:
+                continue
+            component = parts[1]
+            dv = "_".join(parts[2:])
+            try:
+                df = pd.read_csv(p)
+            except Exception:
+                continue
+            if "p-unc" not in df.columns:
+                continue
+            out.append((component, dv, p, df))
+        return out
+
+    # Pairwise and LMM-pairwise share the same correction logic.
+    for kind in ("pairwise", "lmm_pairwise"):
+        items = _load(kind)
+        if not items:
+            continue
+
+        # Build a single long table of p-values with a stable row id.
+        records = []
+        for component, dv, pth, df in items:
+            for idx, p_unc in enumerate(df["p-unc"].astype(float).fillna(1.0).to_list()):
+                if fam == "component":
+                    key = component
+                elif fam == "dv":
+                    key = dv
+                elif fam == "all":
+                    key = "all"
+                else:
+                    # Unknown family choice -> do nothing
+                    return
+                records.append({"key": key, "path": str(pth), "row": idx, "p": float(p_unc)})
+
+        if not records:
+            continue
+
+        rec_df = pd.DataFrame.from_records(records)
+        rec_df["p_corr_family"] = float("nan")
+
+        for key, grp in rec_df.groupby("key", dropna=False):
+            pvals = grp["p"].astype(float).values
+            try:
+                _, p_corr, _, _ = multipletests(pvals, method=m)
+            except Exception:
+                p_corr = np.full_like(pvals, fill_value=np.nan, dtype=float)
+            rec_df.loc[grp.index, "p_corr_family"] = p_corr
+
+        # Write back into each file
+        by_path = rec_df.groupby("path")
+        for component, dv, pth, df in items:
+            p_str = str(pth)
+            if p_str not in by_path.groups:
+                continue
+            g = rec_df.loc[by_path.groups[p_str]]
+            # preserve original order
+            g = g.sort_values("row")
+            if len(g) != len(df):
+                continue
+            df["p-corr-family"] = g["p_corr_family"].astype(float).values
+            df.to_csv(pth, index=False)
+
+
 def _load_yaml(path: Path) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
@@ -65,6 +172,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     tests_cfg = cfg.get("tests", {}) or {}
     plots_cfg = cfg.get("plots", {}) or {}
+    correction_family = str(cfg.get("correction_family", "none"))
 
     cfg_hash = _hash_file(cfg_path)
     analysis_id = output_dir.name
@@ -215,6 +323,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                             figsize=figsize,  # type: ignore[arg-type]
                             build_stamp=build_stamp,
                         )
+
+    # Optional second-stage correction across a broader family (pairwise + lmm_pairwise).
+    # This is applied after all files are written so it can span components/DVs.
+    family_method = str(tests_cfg.get("pairwise", {}).get("correction", "fdr_bh"))
+    _apply_family_correction(output_dir=output_dir, correction_family=correction_family, method=family_method)
 
     # Save summary + report
     save_json(output_dir / str(cfg.get("output", {}).get("summary_filename", "statistical_summary.json")), summary)

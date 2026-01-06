@@ -1,8 +1,8 @@
 # LCN ERP Pipeline
 
-A beginner-friendly, YAML-driven ERP (Event-Related Potential) analysis pipeline for EEG studies at the LCN Lab.
+A user-friendly, YAML-driven ERP (Event-Related Potential) analysis pipeline for EEG studies at the LCN Lab.
 
-This repo is designed so an RA can:
+This repo is designed so lab members can:
 - clone/fork it
 - drop preprocessed EEG epochs into `data/`
 - define conditions in a YAML file

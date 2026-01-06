@@ -127,12 +127,12 @@ def make_erp_figure(
     ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Amplitude (µV)")
     if title:
-        fig.suptitle(title, fontsize=12, fontweight="bold", y=0.97)
+        fig.suptitle(title, fontsize=12, fontweight="bold", y=0.99)
     if subtitle:
         enhanced = subtitle
         if latencies_by_label:
             enhanced = f"{enhanced} | Vertical lines = {latency_annotation_label} Latency"
-        fig.text(0.5, 0.90, enhanced, ha="center", fontsize=9)
+        fig.text(0.5, 0.94, enhanced, ha="center", fontsize=9)
     if xlim_ms is not None:
         ax.set_xlim(xlim_ms)
     if ylimit_uv is not None:
@@ -140,9 +140,11 @@ def make_erp_figure(
     ax.grid(True, which="major", linestyle=":", linewidth=0.5, alpha=0.25)
     ax.legend(loc="upper left", fontsize=8, frameon=True, framealpha=0.9)
 
-    # Reserve top space for title/subtitle so they never overlap the axes/legend.
+    # Reserve top space for title/subtitle so they never overlap the axes/legend,
+    # but keep it tight so the header doesn't dominate the figure.
     try:
-        fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.84))
+        top = 0.905 if subtitle else 0.93
+        fig.tight_layout(rect=(0.0, 0.0, 1.0, top))
     except Exception:
         pass
     return fig
@@ -253,11 +255,6 @@ def make_peak_to_peak_figure(
     import numpy as np
 
     fig, ax = plt.subplots(figsize=(7.2, 5.0))
-    # Reserve space for big title + subtitle
-    try:
-        fig.subplots_adjust(top=0.78)
-    except Exception:
-        pass
 
     # Plot waveforms
     for label, y in curves_by_label.items():
@@ -311,9 +308,17 @@ def make_peak_to_peak_figure(
     ax.legend(loc="upper right", fontsize=9, frameon=True, framealpha=0.9)
 
     if title:
-        fig.suptitle(title, fontsize=18, fontweight="bold", y=0.96)
+        # Match the main component plot styling (avoid oversized/bold title).
+        fig.suptitle(title, fontsize=12, fontweight="bold", y=0.99)
     if subtitle:
-        fig.text(0.5, 0.89, subtitle, ha="center", fontsize=12)
+        fig.text(0.5, 0.94, subtitle, ha="center", fontsize=9)
+
+    # Keep header tight (same approach as make_erp_figure).
+    try:
+        top = 0.905 if subtitle else 0.93
+        fig.tight_layout(rect=(0.0, 0.0, 1.0, top))
+    except Exception:
+        pass
     return fig
 
 

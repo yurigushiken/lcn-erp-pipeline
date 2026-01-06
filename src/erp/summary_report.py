@@ -112,7 +112,8 @@ class StatisticalReportGenerator:
         for _, row in df.head(5).iterrows():
             a = row.get("A")
             b = row.get("B")
-            p = row.get("p-corr", row.get("p-unc", "n/a"))
+            # Prefer family-corrected p if present, then per-file corrected p, then uncorrected.
+            p = row.get("p-corr-family", row.get("p-corr", row.get("p-unc", "n/a")))
             lines.append(f"- {a} vs {b}: p={p}")
         lines.append("")
         return lines
