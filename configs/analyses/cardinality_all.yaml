@@ -1,0 +1,53 @@
+dataset:
+  root: data/lab_data_original_with_primes
+  pattern: sub-*_preprocessed-epo.fif
+  montage_sfp: assets/net/AdultAverageNet128_v1.sfp
+
+selection:
+  # Important: cardinality trials had no button press, so ACC1 cannot be used.
+  response: ALL
+  response_field: Target.ACC
+  min_epochs_per_set: 1
+  condition_sets:
+    - name: "1"
+      conditions: ["11"]
+      color: "#1f77b4"
+    - name: "2"
+      conditions: ["22"]
+      color: "#ff7f0e"
+    - name: "3"
+      conditions: ["33"]
+      color: "#2ca02c"
+    - name: "4"
+      conditions: ["44"]
+      color: "#d62728"
+    - name: "5"
+      conditions: ["55"]
+      color: "#9467bd"
+    - name: "6"
+      conditions: ["66"]
+      color: "#8c564b"
+
+components: [P1, N1, P3b, Fz]
+
+preprocessing:
+  baseline_ms: [-100, 0]
+
+roi:
+  min_channels: 4
+
+plots:
+  formats: [png]
+  dpi: 300
+
+outputs:
+  plots_dir: docs/assets/plots/cardinality_all
+  tables_dir: docs/assets/tables/cardinality_all
+
+measurement:
+  latency: peak
+  amplitude: peak
+  peak_to_peak:
+    enabled: true
+    roi: [N1_L, N1_R]
+

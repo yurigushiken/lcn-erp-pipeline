@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Conda / virtual env
+.conda/
+.venv/
+env/
+venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Data (keep the directory, ignore contents)
+data/**
+!data/.gitkeep
+
+# Generated outputs
+docs/assets/plots/**
+docs/assets/tables/**
+docs/assets/stats/**
+docs/assets/plots/**/*-no_topo.png
+
+# Allow committing curated docs pages/index if desired
+!docs/index.md
+!docs/analysis/**

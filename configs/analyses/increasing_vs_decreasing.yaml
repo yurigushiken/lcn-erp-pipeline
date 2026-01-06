@@ -1,0 +1,51 @@
+dataset:
+  root: data/lab_data_original_with_primes
+  pattern: sub-*_preprocessed-epo.fif
+  montage_sfp: assets/net/AdultAverageNet128_v1.sfp
+
+selection:
+  response: ALL
+  response_field: Target.ACC
+  min_epochs_per_set: 1
+  condition_sets:
+    - name: Increasing
+      conditions: ['12', '13', '14', '23', '24', '25', '34', '35', '36', '45', '46', '56']
+      color: '#2ca02c'  # green
+      linestyle: '-'
+    - name: Decreasing
+      conditions: ['21', '32', '31', '43', '42', '41', '54', '53', '52', '65', '64', '63']
+      color: '#d62728'  # red
+      linestyle: '-'
+
+components:
+  - P1
+  - N1
+  - P3b
+  - Fz
+
+preprocessing:
+  baseline_ms: [-100, 0]
+
+roi:
+  min_channels: 4
+
+plots:
+  formats: [png]
+  dpi: 300
+  ylimit_uv: 6
+  show_sem: false
+  exclude_non_scalp: true
+
+outputs:
+  plots_dir: docs/assets/plots/increasing_vs_decreasing
+  tables_dir: docs/assets/tables/increasing_vs_decreasing
+
+measurement:
+  latency: peak
+  amplitude: peak
+  peak_to_peak:
+    enabled: true
+    roi: [N1_L, N1_R]
+    hline_color: '#000000'
+    hline_style: ':'
+

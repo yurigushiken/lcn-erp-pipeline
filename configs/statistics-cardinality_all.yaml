@@ -1,0 +1,98 @@
+# Statistical Analysis Configuration (cardinality_all)
+#
+# Input: subject_measurements.csv produced by scripts/run_analysis.py
+
+input_csv: "docs/assets/tables/cardinality_all/subject_measurements.csv"
+output_dir: "docs/assets/stats/cardinality_all"
+
+filters:
+  min_snr: null
+  dropna: true
+
+correction_family: "component"
+
+components:
+  - Fz
+  - N1
+  - P1
+  - P3b
+
+dependent_variables:
+  - peak_latency_ms
+  - peak_amplitude_roi
+
+tests:
+  anova:
+    enabled: true
+    within: condition
+    subject: subject_id
+    output_format: csv
+    detailed: true
+
+  pairwise:
+    enabled: true
+    within: condition
+    subject: subject_id
+    correction: fdr_bh
+    effsize: cohen
+    output_format: csv
+
+  lmm:
+    enabled: true
+    fixed: condition + snr
+    random: subject_id
+    method: lbfgs
+    output_format: json
+    include_diagnostics: true
+
+  lmm_pairwise:
+    enabled: true
+    fixed: condition + snr
+    random: subject_id
+    correction: hs
+
+descriptives:
+  enabled: true
+  groupby: condition
+  output_format: csv
+
+output:
+  print_to_console: true
+  decimal_precision: 4
+  create_summary: true
+  summary_filename: "statistical_summary.json"
+
+plots:
+  enabled: true
+  plots_subdir: "plots"
+  boxplot:
+    enabled: true
+    show_points: true
+    show_mean: true
+    include_window_context: true
+  violin:
+    enabled: true
+    inner: "box"
+    include_window_context: true
+  effect_size:
+    enabled: true
+    show_ci: true
+    threshold_lines: [0.2, 0.5, 0.8]
+    threshold_labels: ["Small", "Medium", "Large"]
+  dpi: 300
+  figsize: [8, 6]
+
+reporting:
+  include_library_versions: true
+  include_gg_correction: true
+  use_generalized_eta_squared: true
+  include_effect_size_ci: true
+  document_missing_data: true
+  document_measurement_windows: true
+
+advanced:
+  random_seed: 42
+  alpha: 0.05
+  save_filtered_data: false
+  verbosity: 1
+

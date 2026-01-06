@@ -1,0 +1,201 @@
+# =============================================================================
+# ERP ANALYSIS TEMPLATE
+# =============================================================================
+#
+# Copy this file, rename it, then edit values to match your study.
+#
+# Example:
+#   Copy-Item configs/analyses/_template.yaml configs/analyses/my_study.yaml
+#   # then edit configs/analyses/my_study.yaml
+#
+# Run:
+#   python scripts/run_analysis.py --config configs/analyses/my_study.yaml
+#
+# Notes for RAs:
+# - You do NOT need to edit Python code.
+# - You define your analysis in this YAML file.
+# - This project assumes EGI 128-channel HydroCel by default.
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# dataset: where your EEG data lives, and how to find it
+# -----------------------------------------------------------------------------
+dataset:
+  # root: folder containing your preprocessed MNE Epochs (.fif) files.
+  # - For this repo, raw data is expected in the top-level data/ folder.
+  # - Put your study data in: data/<your_study_name>/
+  #
+  # Example (numerical study test data):
+  #   root: data/lab_data_original_with_primes
+  #
+  # Example (autism study):
+  #   root: data/autism_study_preprocessed
+  root: data/lab_data_original_with_primes
+
+  # pattern: which files to load in dataset.root.
+  # Typical convention:
+  #   sub-01_preprocessed-epo.fif
+  #   sub-02_preprocessed-epo.fif
+  #
+  # If your filenames differ, change this glob.
+  pattern: sub-*_preprocessed-epo.fif
+
+  # montage_sfp: electrode locations for EGI 128-channel HydroCel net.
+  # Keep this unless your lab uses a different net (rare for LCN).
+  montage_sfp: assets/net/AdultAverageNet128_v1.sfp
+
+
+# -----------------------------------------------------------------------------
+# selection: how to define conditions, and which trials to include
+# -----------------------------------------------------------------------------
+selection:
+  # response: which trials to include by accuracy.
+  # - ALL  = include all trials
+  # - ACC1 = only correct trials
+  # - ACC0 = only incorrect trials
+  response: ALL
+
+  # response_field: metadata column name for accuracy (in epochs.metadata).
+  # For the LCN numerical dataset, this is Target.ACC.
+  # For other studies, you may have Accuracy, correct, etc.
+  response_field: Target.ACC
+
+  # min_epochs_per_set: minimum trials required for a subject to be included in a given condition set.
+  # If a subject has fewer trials than this threshold, they are excluded for that set (QC).
+  min_epochs_per_set: 1
+
+  # condition_sets: this is the MOST IMPORTANT section for new studies.
+  #
+  # Each condition set is one line in your plots and one condition level in stats.
+  #
+  # Fields:
+  # - name: human-readable label (appears in plots, tables, and stats)
+  # - conditions: list of event codes (strings) to include
+  # - metadata_filters: optional extra filters by metadata columns
+  # - color / linestyle: plot styling (recommended for readability)
+  #
+  # Autism example (hypothetical):
+  #   - name: "Deviant"
+  #     conditions: ["DEV"]
+  #     color: "#d62728"
+  #   - name: "Standard"
+  #     conditions: ["STD"]
+  #     color: "#1f77b4"
+  #
+  condition_sets:
+    - name: 1 to 2
+      conditions: ['12']
+      # Optional: filter by other metadata columns.
+      # metadata_filters:
+      #   direction: ["I"]      # example: only increasing trials
+      color: '#ef0000'
+      linestyle: '-'
+
+    - name: 2 to 3
+      conditions: ['23']
+      color: '#2c6dde'
+      linestyle: '-'
+
+
+# -----------------------------------------------------------------------------
+# components: which ERP components to analyze
+# -----------------------------------------------------------------------------
+components:
+  # These must exist in configs/components.yaml.
+  # Common:
+  # - P1  (early visual positivity)
+  # - N1  (early visual negativity / attention-related)
+  # - P3b (later positivity / decision/context updating)
+  # - Fz  (frontocentral component often used for MMN-ish analyses)
+  #
+  # Autism studies often care about MMN (Mismatch Negativity).
+  # If you add a new component (e.g., MMN), you must also add it to configs/components.yaml
+  # and define its ROI electrodes in configs/electrodes.yaml.
+  - P1
+  - N1
+  - P3b
+  - Fz
+
+
+# -----------------------------------------------------------------------------
+# preprocessing: small, controlled operations applied at runtime
+# -----------------------------------------------------------------------------
+preprocessing:
+  # baseline_ms: baseline correction window (ms).
+  # This must be within the epoch time range.
+  baseline_ms: [-100, 0]
+
+
+# -----------------------------------------------------------------------------
+# roi: ROI robustness controls
+# -----------------------------------------------------------------------------
+roi:
+  # min_channels: minimum ROI electrodes that must be present to compute ROI averages.
+  # This matters if your data has missing/bad channels.
+  min_channels: 4
+
+
+# -----------------------------------------------------------------------------
+# plots: plot settings and style controls
+# -----------------------------------------------------------------------------
+plots:
+  # formats: currently the pipeline writes PNGs (recommended).
+  formats: [png]
+
+  # dpi: output resolution. 300 is publication-ready.
+  dpi: 300
+
+  # ylimit_uv: fixed y-axis range for ERP plots (±ylimit_uv).
+  # Keeping this fixed improves visual comparison across conditions.
+  ylimit_uv: 6
+
+  # show_sem: add SEM bands around ERP waveforms (optional).
+  # The original reference plots typically did NOT include SEM bands.
+  show_sem: false
+
+  # exclude_non_scalp: remove EGI non-scalp electrodes from topography plots.
+  # Keep this true unless you have a strong reason to display all sensors.
+  exclude_non_scalp: true
+
+  # non_scalp_labels: override list of non-scalp electrodes if needed.
+  # If omitted, the pipeline uses the reference default list.
+  # non_scalp_labels: ["E125", "E126", "E127", "E128"]
+
+
+# -----------------------------------------------------------------------------
+# outputs: where to write results
+# -----------------------------------------------------------------------------
+outputs:
+  # plots_dir: figures go here
+  plots_dir: docs/assets/plots/my_analysis
+
+  # tables_dir: CSV/JSON outputs go here
+  tables_dir: docs/assets/tables/my_analysis
+
+
+# -----------------------------------------------------------------------------
+# measurement: how to mark latencies/amplitudes (peak vs FAL, etc.)
+# -----------------------------------------------------------------------------
+measurement:
+  # latency:
+  # - peak = peak latency within the component window (reference style)
+  # - fal  = 50% fractional area latency (more noise-robust)
+  latency: peak
+
+  # amplitude:
+  # - peak = peak amplitude within window (reference style)
+  # - mean = mean amplitude within window
+  amplitude: peak
+
+  # peak_to_peak: P1↔N1 peak-to-peak measured on the N1 ROI waveform.
+  peak_to_peak:
+    enabled: true
+
+    # roi: which ROIs to use for building the P1↔N1 waveform (usually N1_L + N1_R).
+    roi: [N1_L, N1_R]
+
+    # Horizontal line style for P1 and N1 levels in the peak-to-peak plot.
+    hline_color: '#000000'
+    hline_style: ':'
+

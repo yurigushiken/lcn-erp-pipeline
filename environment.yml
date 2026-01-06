@@ -1,0 +1,16 @@
+name: lcn-erp-pipeline
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - mne=1.6.*
+  - numpy
+  - pandas
+  - matplotlib
+  - scipy
+  - statsmodels
+  - pingouin
+  - pyyaml
+  - sniffio
+  - pytest
+  - pytest-cov
